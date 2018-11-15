@@ -1,8 +1,27 @@
+var userName;
 var size = 10;
 var milliseconds = 100;
 var speed = 100;
 var colors = ['blue', 'red', 'green', 'black', 'purple', 'pink', 'yellow', 'brown', 'orange'];
 var color = {'snake': '','food': ''};
+var viewScore = "Score \n\n";
+
+var db = openDatabase('SnakeGame', '1.0', 'User database for record', 2 * 1024 * 1024);
+
+db.transaction(function(tx){
+tx.executeSql('CREATE TABLE IF NOT EXISTS USER (ID INTEGER PRIMARY KEY, name TEXT, score INTEGER)');
+});
+
+db.transaction(function(tx){
+    tx.executeSql('SELECT name, score FROM USER Order by score desc', [], function(tx, result){
+        var rows = result.rows;
+        var i = 0;
+        while(i < rows.length && i < 5){
+           viewScore += rows[i].name + " --> " + rows[i].score + "\n";
+            i ++;  
+        }
+    });
+}, null);
 
 var keyCodes =
 {
@@ -51,13 +70,17 @@ var keyCodes =
     '83': function() {
         if(direction !== 'up' && !isPaused)
             move('down');
-  }
+    },
+    '89': function() {
+       windowRecord();
+    }
 };
 
 function awake(){
     canvas = document.getElementById('base');
     context = canvas.getContext('2d');
     start();
+    enterName();
 }
 
 function start(){
@@ -76,7 +99,20 @@ function start(){
 
     timer = setInterval(function(){
         move(direction);
-    },milliseconds); 
+    },milliseconds);
+}
+
+function enterName(){
+    do {
+        userName = prompt ("Name to start the game:");
+        } while (userName == null || userName == "");
+
+        if(userName.length > 10)
+            userName = userName.substring(0,10);
+}
+
+function windowRecord(){
+    alert(viewScore);
 }
 
 function setScore(){
@@ -97,7 +133,6 @@ function updateSnake(){
         dead();
         return 0;
     }
-  
     snake.push([snakePoint['x'], snakePoint['y']]);	
     context.fillStyle = color['snake'];	
     context.fillRect(snakePoint['x'], snakePoint['y'], size, size);
@@ -121,6 +156,7 @@ function snakeFed(){
         food();
     }	
 }
+
 function killedHimself(snake){
     return (snake[0] === snakePoint['x'] && snake[1] === snakePoint['y']);
 }
@@ -187,6 +223,7 @@ function executeDirection(direction, axis, value){
 }
 
 function dead(){
+    dataBaseNewUser();
     clearInterval(timer);
     isPaused = true;
     document.write('<center><h3>"You died" press Enter</h3><img src="gif/snakeDead.webp"></center> <script type= "text/javascript" src="javascript/snakeDead.js"></script>');
@@ -206,5 +243,18 @@ function continueGame(){
 document.onkeydown = function(event){
     keyCode = window.event.keyCode;
     keyCodes.hasOwnProperty(keyCode) && keyCodes[keyCode]();
-    console.log(keyCode);
 };
+
+function dataBaseNewUser(){
+    var newRecord = length - 3;
+    db.transaction(function(tx){
+        tx.executeSql('SELECT name, score FROM USER WHERE name=? Order by score desc', [userName], function(tx, result){
+            if(result.rows.length == 0){
+                tx.executeSql('INSERT INTO USER (name, score) VALUES(?, ?)', [userName, newRecord]);
+            }else{
+                if(result.rows[0].score < newRecord)
+                    tx.executeSql('UPDATE USER SET score=? WHERE name=? Order by score desc', [newRecord,userName]);
+            }
+        });
+    });
+}
