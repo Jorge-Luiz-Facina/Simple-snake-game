@@ -253,7 +253,7 @@ function dataBaseNewUser(){
                 tx.executeSql('INSERT INTO USER (name, score) VALUES(?, ?)', [userName, newRecord]);
             }else{
                 if(result.rows[0].score < newRecord)
-                    tx.executeSql('UPDATE USER SET score=? WHERE name=? Order by score desc', [newRecord,userName]);
+                    tx.executeSql('UPDATE USER SET score=? WHERE name=?', [newRecord,userName]);
             }
         });
     });
